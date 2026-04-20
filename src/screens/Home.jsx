@@ -1,9 +1,9 @@
-import { useNavigate } from 'react-router-dom'
-import { Coffee } from '@phosphor-icons/react'
+import { CalendarBlank, Coffee } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { toMinutes } from '../lib/utils'
 import ClassCard from '../components/ClassCard'
 import BottomNav from '../components/BottomNav'
+import { useChildNavigation } from '../lib/pageTransitions'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { schoolDaySchedule, collegeDaySchedule } from '../data/seed'
@@ -186,7 +186,7 @@ function DayColumn({ classes, onClassClick, isToday, isFirst = false }) {
 /* ── Home Screen ─────────────────────────────────────────────────────────── */
 export default function Home() {
   const { currentUser, getClasses } = useApp()
-  const navigate = useNavigate()
+  const pushChildPage = useChildNavigation()
 
   const masterClasses = getClasses()
   const schedule      = currentUser?.role === 'school' ? schoolDaySchedule : collegeDaySchedule
@@ -246,23 +246,33 @@ export default function Home() {
                   )
                 )}
 
-                {todayEntries.map(cls => {
-                  if (!cls.startTime || !cls.endTime) return null
-                  const top    = (toMinutes(cls.startTime) - START_HOUR * 60) / 60 * HOUR_HEIGHT
-                  const height = Math.max((toMinutes(cls.endTime) - toMinutes(cls.startTime)) / 60 * HOUR_HEIGHT, 24)
-                  return (
-                    <div
-                      key={cls.id}
-                      className="absolute"
-                      style={{ top, height, left: 0, right: 0 }}
-                    >
-                      {cls.isLunch
-                        ? <LunchBlock />
-                        : <ClassCard cls={cls} onClick={() => navigate(`/workspace/${cls.id}`)} />
-                      }
+                {todayClasses.length === 0 ? (
+                  <div className="absolute inset-x-4 top-24 bg-card border border-border rounded-2xl px-5 py-6 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-tint flex items-center justify-center mx-auto">
+                      <CalendarBlank size={24} weight="fill" className="text-primary" />
                     </div>
-                  )
-                })}
+                    <p className="text-[16px] font-semibold text-foreground mt-3">You have no classes today</p>
+                    <p className="text-[13px] text-muted-foreground mt-1">Switch to Week view to plan your upcoming classes.</p>
+                  </div>
+                ) : (
+                  todayEntries.map(cls => {
+                    if (!cls.startTime || !cls.endTime) return null
+                    const top    = (toMinutes(cls.startTime) - START_HOUR * 60) / 60 * HOUR_HEIGHT
+                    const height = Math.max((toMinutes(cls.endTime) - toMinutes(cls.startTime)) / 60 * HOUR_HEIGHT, 24)
+                    return (
+                      <div
+                        key={cls.id}
+                        className="absolute"
+                        style={{ top, height, left: 0, right: 0 }}
+                      >
+                        {cls.isLunch
+                          ? <LunchBlock />
+                          : <ClassCard cls={cls} onClick={() => pushChildPage(`/workspace/${cls.id}`)} />
+                        }
+                      </div>
+                    )
+                  })
+                )}
               </div>
 
               {/* Now indicator */}
@@ -300,7 +310,7 @@ export default function Home() {
                 <DayColumn
                   key={dayShort + d.getDate()}
                   classes={dayClasses}
-                  onClassClick={(id) => navigate(`/workspace/${id}`)}
+                  onClassClick={(id) => pushChildPage(`/workspace/${id}`)}
                   isToday={isToday}
                   isFirst={index === 0}
                 />

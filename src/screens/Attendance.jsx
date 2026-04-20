@@ -1,12 +1,21 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CaretLeft, MagnifyingGlass } from '@phosphor-icons/react'
+import { CaretDown, CaretLeft, MagnifyingGlass } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { showToast } from '../components/Toast'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { allStudents } from '../data/seed'
+
+const ATTENDANCE_PERIODS = [
+  'Today',
+  'This week',
+  'This month',
+  'Current semester',
+  'Academic year',
+]
 
 export default function Attendance() {
   const { classId } = useParams()
@@ -20,6 +29,7 @@ export default function Attendance() {
     Object.fromEntries(allStudents.map(s => [s.id, savedAttendance[s.id] || 'present']))
   )
   const [search, setSearch] = useState('')
+  const [attendancePeriod, setAttendancePeriod] = useState('Today')
   const [hasChange, setHasChange] = useState(false)
 
   if (!cls) return null
@@ -57,7 +67,25 @@ export default function Attendance() {
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-[18px] font-semibold text-foreground truncate">{cls.displayName}</h1>
-          <p className="text-[13px] text-muted-foreground">Attendance · Today</p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="mt-0.5 inline-flex items-center gap-1 rounded-full text-[13px] font-medium text-muted-foreground active:text-primary">
+                Attendance · {attendancePeriod}
+                <CaretDown size={12} weight="bold" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-52">
+              {ATTENDANCE_PERIODS.map(period => (
+                <DropdownMenuItem
+                  key={period}
+                  onSelect={() => setAttendancePeriod(period)}
+                  className={period === attendancePeriod ? 'text-primary font-semibold' : ''}
+                >
+                  {period}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <button
           onClick={handleSave}
@@ -80,17 +108,19 @@ export default function Attendance() {
 
       {/* Search */}
       <div className="px-4 py-3">
-        <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2.5">
-          <MagnifyingGlass size={16} color="var(--color-muted-foreground)" />
+        <InputGroup className="h-11 rounded-lg bg-card border-border shadow-none">
           <label htmlFor="search-students" className="sr-only">Search students</label>
-          <Input
+          <InputGroupInput
             id="search-students"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or roll no."
-            className="flex-1 text-[15px] border-none shadow-none p-0 h-auto focus-visible:ring-0 bg-transparent"
+            className="text-sm"
           />
-        </div>
+          <InputGroupAddon>
+            <MagnifyingGlass size={16} />
+          </InputGroupAddon>
+        </InputGroup>
       </div>
 
       {/* Student list */}
@@ -101,7 +131,10 @@ export default function Attendance() {
             return (
               <li key={student.id} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3">
                 <Avatar className="w-9 h-9 flex-shrink-0">
-                  <AvatarFallback className="text-[13px] font-bold bg-brand-tint text-primary">
+                  <AvatarFallback
+                    className="text-[13px] font-bold"
+                    style={{ backgroundColor: 'var(--color-avatar-accent)', color: 'var(--color-avatar-accent-foreground)' }}
+                  >
                     {student.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>

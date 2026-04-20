@@ -126,7 +126,7 @@ export default function Login() {
             onClick={handleSignIn}
             disabled={loading}
             className="w-full h-12 text-[15px] font-semibold rounded-lg disabled:opacity-60"
-            style={{ background: 'linear-gradient(180deg, #4468d4 0%, #3050b8 100%)' }}
+            style={{ background: 'linear-gradient(180deg, var(--teacher-brand-700) 0%, var(--teacher-brand-800) 100%)' }}
           >
             {loading ? 'Signing in…' : 'Sign In'}
           </Button>

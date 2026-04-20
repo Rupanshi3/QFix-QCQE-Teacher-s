@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CaretLeft, Bell, DotsThreeVertical, Lock, Warning } from '@phosphor-icons/react'
+import { CaretLeft, Bell, CaretDown, DotsThreeVertical, Lock, Warning } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { submissionDetail } from '../data/seed'
 import { formatDueDate } from '../lib/utils'
@@ -10,6 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
+const avatarAccentStyle = {
+  backgroundColor: 'var(--color-avatar-accent)',
+  color: 'var(--color-avatar-accent-foreground)',
+}
+
 export default function AssignmentDetail() {
   const { assignmentId } = useParams()
   const [searchParams] = useSearchParams()
@@ -18,6 +23,8 @@ export default function AssignmentDetail() {
   const { getAssignmentsForClass, deleteAssignment } = useApp()
   const [reminded, setReminded] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showGraded, setShowGraded] = useState(true)
+  const [showUngraded, setShowUngraded] = useState(true)
 
   const assignments = getAssignmentsForClass(classId || '')
   const assignment = assignments.find(a => a.id === assignmentId)
@@ -33,6 +40,8 @@ export default function AssignmentDetail() {
 
   const isOverdue = assignment.overdue
   const submittedList = submissionDetail.submitted
+  const gradedList = submittedList.filter(student => student.grade)
+  const ungradedList = submittedList.filter(student => !student.grade)
   const pendingList = submissionDetail.pending
   const dueLabel = formatDueDate(assignment.dueDate)
 
@@ -120,22 +129,82 @@ export default function AssignmentDetail() {
         </TabsList>
 
         <TabsContent value="submitted" className="flex-1 overflow-y-auto px-4 pt-4 pb-4 mt-0">
-          <ul className="flex flex-col gap-3 list-none">
-            {submittedList.map(student => (
-              <li key={student.id} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3">
-                <Avatar className="w-9 h-9 flex-shrink-0">
-                  <AvatarFallback className="text-[13px] font-bold bg-brand-tint text-primary">
-                    {student.name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-medium text-foreground truncate">{student.name}</p>
-                  <p className="text-[13px] text-muted-foreground">{student.time}</p>
+          <div className="flex flex-col gap-4">
+            <section className="bg-card border border-border rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowGraded(prev => !prev)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left"
+              >
+                <div>
+                  <p className="text-[15px] font-semibold text-foreground">Marked / Graded</p>
+                  <p className="text-[13px] text-muted-foreground">{gradedList.length} submissions</p>
                 </div>
-                <div className="w-2 h-2 rounded-full bg-success flex-shrink-0" aria-label="Submitted" />
-              </li>
-            ))}
-          </ul>
+                <CaretDown
+                  size={16}
+                  weight="bold"
+                  className={`text-muted-foreground transition-transform ${showGraded ? 'rotate-0' : '-rotate-90'}`}
+                />
+              </button>
+              {showGraded && (
+                <ul className="px-4 pb-4 flex flex-col gap-3 list-none">
+                  {gradedList.map(student => (
+                    <li key={student.id} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3">
+                      <Avatar className="w-9 h-9 flex-shrink-0">
+                        <AvatarFallback className="text-[13px] font-bold" style={avatarAccentStyle}>
+                          {student.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-medium text-foreground truncate">{student.name}</p>
+                        <p className="text-[13px] text-muted-foreground">{student.time}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-[13px] font-semibold text-foreground">{student.grade}</p>
+                        <p className="text-[11px] text-muted-foreground">Graded</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="bg-card border border-border rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowUngraded(prev => !prev)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left"
+              >
+                <div>
+                  <p className="text-[15px] font-semibold text-foreground">Ungraded</p>
+                  <p className="text-[13px] text-muted-foreground">{ungradedList.length} submissions</p>
+                </div>
+                <CaretDown
+                  size={16}
+                  weight="bold"
+                  className={`text-muted-foreground transition-transform ${showUngraded ? 'rotate-0' : '-rotate-90'}`}
+                />
+              </button>
+              {showUngraded && (
+                <ul className="px-4 pb-4 flex flex-col gap-3 list-none">
+                  {ungradedList.map(student => (
+                    <li key={student.id} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3">
+                      <Avatar className="w-9 h-9 flex-shrink-0">
+                        <AvatarFallback className="text-[13px] font-bold" style={avatarAccentStyle}>
+                          {student.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-medium text-foreground truncate">{student.name}</p>
+                        <p className="text-[13px] text-muted-foreground">{student.time}</p>
+                      </div>
+                      <div className="w-2 h-2 rounded-full bg-success flex-shrink-0" aria-label="Submitted" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
         </TabsContent>
 
         <TabsContent value="pending" className="flex-1 overflow-y-auto px-4 pt-4 pb-4 mt-0 flex flex-col gap-3">
@@ -150,7 +219,7 @@ export default function AssignmentDetail() {
             {pendingList.map(student => (
               <li key={student.id} className={`bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3 ${isOverdue ? 'opacity-60' : ''}`}>
                 <Avatar className="w-9 h-9 flex-shrink-0">
-                  <AvatarFallback className="text-[13px] font-bold bg-brand-tint text-primary">
+                  <AvatarFallback className="text-[13px] font-bold" style={avatarAccentStyle}>
                     {student.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>

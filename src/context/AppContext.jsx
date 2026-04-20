@@ -6,6 +6,7 @@ import {
   collegeBatches,
   schoolAssignments,
   collegeAssignments,
+  classSyllabus,
   channels,
   schoolChannelOrder,
   collegeChannelOrder,
@@ -32,6 +33,14 @@ export function AppProvider({ children }) {
       Object.entries(channels).map(([k, v]) => [k, { ...v, posts: [...v.posts] }])
     )
   )
+  const [syllabusState, setSyllabusState] = useState({
+    school: Object.fromEntries(
+      Object.entries(classSyllabus.school).map(([k, v]) => [k, v.map(item => ({ ...item }))])
+    ),
+    college: Object.fromEntries(
+      Object.entries(classSyllabus.college).map(([k, v]) => [k, v.map(item => ({ ...item }))])
+    ),
+  })
   // attendance state: { [classId]: { [studentId]: 'present'|'absent' } }
   const [attendanceState, setAttendanceState] = useState({})
 
@@ -69,6 +78,46 @@ export function AppProvider({ children }) {
       return { school: update(prev.school), college: update(prev.college) }
     })
   }, [])
+
+  const rescheduleClass = useCallback((classId, schedule) => {
+    const role = classId.startsWith('sc-') ? 'school' : 'college'
+    const rescheduledTo = { ...schedule }
+    setClassesState(prev => {
+      const update = (list) => list.map(c => c.id === classId ? { ...c, rescheduledTo } : c)
+      return { ...prev, [role]: update(prev[role]) }
+    })
+
+    const cls = [...classesState.school, ...classesState.college].find(c => c.id === classId)
+    if (role === 'college' && cls?.channelId) {
+      const title = `Class rescheduled to ${schedule.day}, ${schedule.time}`
+      const subtitle = [
+        schedule.date ? `Date: ${schedule.date}` : '',
+        schedule.room ? `Room: ${schedule.room}` : '',
+        schedule.note || '',
+      ].filter(Boolean).join(' · ')
+      const post = {
+        id: `post-reschedule-${Date.now()}`,
+        author: currentUser?.name || 'Teacher',
+        authorInitial: (currentUser?.name || 'T')[0],
+        time: 'Just now',
+        date: new Date().toISOString().split('T')[0],
+        content: title,
+        title,
+        subtitle,
+        type: 'reschedule',
+        schedule: rescheduledTo,
+        reactions: 0,
+      }
+      setChannelsState(prev => ({
+        ...prev,
+        [cls.channelId]: {
+          ...prev[cls.channelId],
+          posts: [post, ...(prev[cls.channelId]?.posts || [])],
+          unread: (prev[cls.channelId]?.unread || 0) + 1,
+        },
+      }))
+    }
+  }, [classesState, currentUser])
 
   // ── Attendance ───────────────────────────────────────────────────────────────
   const getAttendanceForClass = useCallback((classId) => {
@@ -112,7 +161,10 @@ export function AppProvider({ children }) {
         author: currentUser?.name || 'Teacher',
         authorInitial: (currentUser?.name || 'T')[0],
         time: 'Just now',
+        date: new Date().toISOString().split('T')[0],
         content: newAssignment.title,
+        title: newAssignment.title,
+        subtitle: newAssignment.description || '',
         type: 'assignment',
         assignmentId: newAssignment.id,
         dueDate: newAssignment.dueDate,
@@ -142,6 +194,27 @@ export function AppProvider({ children }) {
     }))
   }, [])
 
+  const getSyllabusForClass = useCallback((classId) => {
+    const role = classId.startsWith('sc-') ? 'school' : 'college'
+    return syllabusState[role][classId] || []
+  }, [syllabusState])
+
+  const addSyllabusItem = useCallback((classId, item) => {
+    const role = classId.startsWith('sc-') ? 'school' : 'college'
+    const newItem = {
+      id: `syl-${Date.now()}`,
+      ...item,
+    }
+    setSyllabusState(prev => ({
+      ...prev,
+      [role]: {
+        ...prev[role],
+        [classId]: [newItem, ...(prev[role][classId] || [])],
+      },
+    }))
+    return newItem
+  }, [])
+
   // ── Channels ─────────────────────────────────────────────────────────────────
   const getChannelOrder = useCallback(() => {
     if (!currentUser) return []
@@ -152,15 +225,19 @@ export function AppProvider({ children }) {
     return channelsState[channelId]
   }, [channelsState])
 
-  const addPost = useCallback((channelId, content) => {
+  const addPost = useCallback((channelId, title, subtitle, metadata = {}) => {
     const post = {
       id: `post-${Date.now()}`,
       author: currentUser?.name || 'Teacher',
       authorInitial: (currentUser?.name || 'T')[0],
       time: 'Just now',
-      content,
+      date: new Date().toISOString().split('T')[0],
+      content: title,
+      title,
+      subtitle: subtitle || '',
       type: 'text',
       reactions: 0,
+      ...metadata,
     }
     setChannelsState(prev => ({
       ...prev,
@@ -189,11 +266,14 @@ export function AppProvider({ children }) {
       switchRole,
       getClasses,
       getClassById,
+      rescheduleClass,
       getAttendanceForClass,
       saveAttendance,
       getAssignmentsForClass,
       addAssignment,
       deleteAssignment,
+      getSyllabusForClass,
+      addSyllabusItem,
       getChannelOrder,
       getChannel,
       addPost,

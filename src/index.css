@@ -5,25 +5,25 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --teacher-brand-50: #EDF2FE;
-  --teacher-brand-100: #DFEAFF;
-  --teacher-brand-200: #D0DFFF;
-  --teacher-brand-300: #BDD1FF;
-  --teacher-brand-400: #A6BFF9;
-  --teacher-brand-500: #87A5EF;
-  --teacher-brand-600: #3D63DD;
-  --teacher-brand-700: #3657C3;
-  --teacher-brand-800: #395BC7;
-  --teacher-brand-900: #1D2E5C;
-  --teacher-brand-950: #121F43;
+  --teacher-brand-50: #ecfdf5;
+  --teacher-brand-100: #d1fae5;
+  --teacher-brand-200: #a7f3d0;
+  --teacher-brand-300: #6ee7b7;
+  --teacher-brand-400: #34d399;
+  --teacher-brand-500: #10b981;
+  --teacher-brand-600: #059669;
+  --teacher-brand-700: #047857;
+  --teacher-brand-800: #065f46;
+  --teacher-brand-900: #064e3b;
+  --teacher-brand-950: #022c22;
 
   /* Semantic status tokens */
-  --success: #16a34a;
-  --success-muted: #f0fdf4;
-  --error: #dc2626;
-  --error-muted: #fef2f2;
-  --warning: #d97706;
-  --warning-muted: #fffbeb;
+  --success: oklch(0.586 0.163 145.071);
+  --success-muted: oklch(0.982 0.020 150.000);
+  --error: oklch(0.577 0.245 27.325);
+  --error-muted: oklch(0.971 0.013 17.380);
+  --warning: oklch(0.666 0.171 62.872);
+  --warning-muted: oklch(0.991 0.015 95.000);
 
   --radius: 0.5rem;
   --background: oklch(1 0 0);
@@ -32,7 +32,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  /* Brand blue wired into shadcn primary token */
+  /* Tailwind emerald palette mapped into the app's brand tokens */
   --primary: var(--teacher-brand-800);
   --primary-foreground: oklch(1 0 0);
   --ring: var(--teacher-brand-800);
@@ -68,19 +68,75 @@
 body {
   font-family: 'Inter', 'Inter Display', sans-serif;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-  background-color: #1c1c1e;
+  background-color: oklch(0.168 0.002 285.786);
   padding-bottom: env(safe-area-inset-bottom);
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  padding: 0;
+.route-stage {
+  height: 100%;
+}
+
+.route-stack {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.route-layer {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.route-layer-base {
+  pointer-events: none;
+  z-index: 0;
+}
+
+.route-layer-entering,
+.route-layer-exiting {
+  z-index: 40;
+  box-shadow: -16px 0 28px rgba(15, 23, 42, 0.14);
+  will-change: transform;
+}
+
+.route-layer-entering {
+  animation: route-layer-entering 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes route-layer-entering {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.route-layer-exiting {
+  animation: route-layer-exiting 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes route-layer-exiting {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-layer-entering,
+  .route-layer-exiting {
+    animation-duration: 1ms;
+  }
 }
 
 [data-slot="tabs-trigger"] {
@@ -128,6 +184,8 @@ button {
   --color-ring: var(--ring);
   /* Teacher brand tint exposed as Tailwind utility: bg-brand-tint, text-brand-tint */
   --color-brand-tint: var(--teacher-brand-50);
+  --color-avatar-accent: var(--teacher-brand-800);
+  --color-avatar-accent-foreground: var(--teacher-brand-100);
   /* Semantic status utilities */
   --color-success: var(--success);
   --color-success-muted: var(--success-muted);
@@ -191,5 +249,11 @@ button {
   body {
     @apply bg-background text-foreground;
   }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0;
+  }
 }
-

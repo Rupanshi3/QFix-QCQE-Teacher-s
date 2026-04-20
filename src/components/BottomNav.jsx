@@ -7,6 +7,8 @@ import { useApp } from '../context/AppContext'
 const schoolTabs = [
   { path: '/home',          label: 'Home',        Icon: CalendarBlank },
   { path: '/communication', label: 'Chat',         Icon: ChatCircle },
+  { path: '/my-classes',    label: 'My Classes',   Icon: Books },
+  { path: '/assignments',   label: 'Assignments',  Icon: ClipboardText },
   { path: '/profile',       label: 'Profile',      Icon: User },
 ]
 

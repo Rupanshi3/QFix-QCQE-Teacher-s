@@ -2,18 +2,22 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MagnifyingGlass, MegaphoneSimple } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '../components/ui/input-group'
+import { useChildLinkProps } from '../lib/pageTransitions'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import BottomNav from '../components/BottomNav'
 
 export default function Communication() {
-  const { getChannelOrder, getChannel, getClassById } = useApp()
+  const { currentUser, getChannelOrder, getChannel, getClassById } = useApp()
   const channelOrder = getChannelOrder()
+  const childLinkProps = useChildLinkProps()
   const [search, setSearch] = useState('')
   const [isSearching, setIsSearching] = useState(false)
+  const isCollege = currentUser?.role === 'college'
 
-  const renderChannelList = (filtered) => (
-    <ul className="flex flex-col list-none">
-      {channelOrder.map((channelId) => {
+  const renderChannelList = (filtered) => {
+    const visibleChannels = channelOrder
+      .map((channelId) => {
         const ch = getChannel(channelId)
         if (!ch) return null
         const lastPost = ch.posts[0]
@@ -31,51 +35,109 @@ export default function Communication() {
             : cls.division.replace('Class ', '')
           : ch.name.charAt(0)
 
-        return (
-          <li key={channelId}><Link
-            to={`/channel/${channelId}`}
-            className="block px-4 py-3 flex items-start gap-3 active:bg-muted/50 transition-colors"
-          >
-            {/* Channel avatar */}
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${isBroadcast ? 'bg-warning-muted' : !classColor ? 'bg-brand-tint' : ''}`}
-              style={!isBroadcast && classColor ? { backgroundColor: classColor + '1A' } : undefined}
-            >
-              {isBroadcast
-                ? <MegaphoneSimple size={20} weight="fill" color="var(--color-warning)" />
-                : <span className="text-[14px] font-bold" style={classColor ? { color: classColor } : undefined}>{avatarLetter}</span>
-              }
-            </div>
+        return { avatarLetter, ch, classColor, divisionLabel, hasUnread, isBroadcast, lastPost }
+      })
+      .filter(Boolean)
 
-            {/* Channel info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <p className="text-[16px] font-semibold truncate">{divisionLabel}</p>
-                {lastPost && (
-                  <span className={`text-[12px] flex-shrink-0 ml-2 ${hasUnread ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                    {lastPost.time}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center justify-between mt-0.5">
-                <p className={`text-[14px] truncate ${hasUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                  {lastPost
-                    ? <><span className="text-muted-foreground">{lastPost.author.split(' ')[0]}: </span>{lastPost.content}</>
-                    : 'No messages yet'
-                  }
-                </p>
-                {hasUnread && (
-                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center flex-shrink-0 ml-2">
-                    {ch.unread}
-                  </span>
-                )}
-              </div>
+    const adminChannels = visibleChannels.filter(({ isBroadcast }) => isBroadcast)
+    const classChannels = visibleChannels.filter(({ isBroadcast }) => !isBroadcast)
+
+    const renderChannelItem = ({ avatarLetter, ch, classColor, divisionLabel, hasUnread, isBroadcast, lastPost }) => (
+      <li key={ch.id}>
+        <Link
+          {...childLinkProps(`/channel/${ch.id}`)}
+          className="block px-3 py-3 flex items-start gap-3 rounded-xl active:bg-muted/60 transition-colors"
+        >
+          <Avatar className="w-10 h-10 flex-shrink-0">
+            <AvatarFallback
+              className="text-[14px] font-bold"
+              style={
+                isBroadcast
+                  ? { backgroundColor: 'var(--color-warning)', color: 'var(--warning-muted)' }
+                  : classColor
+                    ? { backgroundColor: classColor, color: 'rgba(255,255,255,0.92)' }
+                    : { backgroundColor: 'var(--color-avatar-accent)', color: 'var(--color-avatar-accent-foreground)' }
+              }
+            >
+              {isBroadcast ? (
+                <MegaphoneSimple size={20} weight="fill" color="currentColor" />
+              ) : (
+                avatarLetter
+              )}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <p className="text-[16px] font-semibold truncate">{divisionLabel}</p>
+              {lastPost && (
+                <span className={`text-[12px] flex-shrink-0 ml-2 ${hasUnread ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                  {lastPost.time}
+                </span>
+              )}
             </div>
-          </Link></li>
-        )
-      })}
-    </ul>
-  )
+            <div className="flex items-center justify-between mt-0.5">
+              <p className={`text-[14px] truncate ${hasUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                {lastPost
+                  ? <><span className="text-muted-foreground">{lastPost.author.split(' ')[0]}: </span>{lastPost.content}</>
+                  : 'No messages yet'
+                }
+              </p>
+              {hasUnread && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center flex-shrink-0 ml-2">
+                  {ch.unread}
+                </span>
+              )}
+            </div>
+          </div>
+        </Link>
+      </li>
+    )
+
+    const renderSection = (title, description, channels, accentClass = '') => {
+      if (channels.length === 0) return null
+
+      return (
+        <section className="px-4">
+          <div className="mb-2 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{title}</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">{description}</p>
+            </div>
+            <span className="text-[12px] font-semibold text-muted-foreground">{channels.length}</span>
+          </div>
+          <ul className={`flex flex-col list-none rounded-2xl border border-border/80 bg-card shadow-sm overflow-hidden ${accentClass}`}>
+            {channels.map(renderChannelItem)}
+          </ul>
+        </section>
+      )
+    }
+
+    if (visibleChannels.length === 0) {
+      return (
+        <div className="px-4 py-10 text-center">
+          <p className="text-[14px] font-semibold text-foreground">No chats found</p>
+          <p className="text-[13px] text-muted-foreground mt-1">Try another class or group name.</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex flex-col gap-5">
+        {renderSection(
+          isCollege ? 'College administration' : 'Administration',
+          isCollege ? 'Department notices and official updates' : 'Official announcements and staff updates',
+          adminChannels,
+          'bg-warning/5'
+        )}
+        {renderSection(
+          isCollege ? 'College class chats' : 'Class chats',
+          isCollege ? 'Batch-wise subject spaces for students and faculty' : 'Subject-wise spaces for students and teachers',
+          classChannels
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col bg-card">
@@ -87,18 +149,18 @@ export default function Communication() {
       {isSearching ? (
         <>
           <div className="px-4 pb-3 flex items-center gap-2">
-            <InputGroup className="flex-1 rounded-lg bg-muted h-auto">
-              <InputGroupAddon align="inline-start">
-                <MagnifyingGlass size={16} />
-              </InputGroupAddon>
+            <InputGroup className="flex-1 h-11 rounded-lg bg-card border-border shadow-none">
               <InputGroupInput
                 id="search-channels"
                 autoFocus
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search for a class, group, community..."
-                className="text-[16px] py-2.5 h-auto"
+                className="text-sm min-w-0"
               />
+              <InputGroupAddon>
+                <MagnifyingGlass size={16} />
+              </InputGroupAddon>
             </InputGroup>
             <button
               onClick={() => { setSearch(''); setIsSearching(false) }}
@@ -114,15 +176,13 @@ export default function Communication() {
       ) : (
         <>
           <div className="px-4 pb-3">
-            <InputGroup
-              className="rounded-lg bg-muted h-auto cursor-pointer"
+            <div
+              className="flex items-center gap-2 bg-card border border-border rounded-lg h-11 px-3 cursor-pointer"
               onClick={() => setIsSearching(true)}
             >
-              <InputGroupAddon align="inline-start">
-                <MagnifyingGlass size={16} />
-              </InputGroupAddon>
-              <span className="flex-1 text-[16px] text-muted-foreground py-2.5">Search for a class, group, community...</span>
-            </InputGroup>
+              <MagnifyingGlass size={16} className="text-muted-foreground flex-shrink-0" />
+              <span className="flex-1 text-sm text-muted-foreground truncate">Search for a class, group, community...</span>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto pb-24">
             {renderChannelList(false)}

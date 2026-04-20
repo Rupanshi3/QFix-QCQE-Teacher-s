@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 
 export default function AssignmentCard({ assignment, onClick }) {
   const { title, dueDate, submitted, total, overdue } = assignment
+  const graded = Math.min(submitted, Math.max(0, Math.round(submitted * 0.6)))
   const dueLine = overdue
     ? 'Due date passed'
     : dueDate === 'TBD'
@@ -16,7 +17,7 @@ export default function AssignmentCard({ assignment, onClick }) {
         overdue ? 'opacity-75' : ''
       }`}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             {overdue && <Warning size={14} weight="fill" color="var(--color-warning)" className="flex-shrink-0 mt-0.5" />}
@@ -24,10 +25,12 @@ export default function AssignmentCard({ assignment, onClick }) {
               {title}
             </p>
           </div>
-          <p className="text-[13px] text-muted-foreground mt-1">{dueLine}</p>
+          <p className="text-[13px] text-muted-foreground mt-1">
+            {submitted}/{total} submitted · {graded}/{submitted} graded
+          </p>
         </div>
-        <Badge className="text-[11px] font-semibold flex-shrink-0 bg-brand-tint text-primary border-none">
-          {submitted}/{total} submitted
+        <Badge className="text-[11px] font-semibold flex-shrink-0 bg-muted text-muted-foreground border border-border">
+          {dueLine}
         </Badge>
       </div>
     </button>
