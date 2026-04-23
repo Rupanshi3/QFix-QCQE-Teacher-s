@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CaretLeft, MagnifyingGlass } from '@phosphor-icons/react'
+import { ArrowLeft, MagnifyingGlass } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { allStudents } from '../data/seed'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -33,7 +33,7 @@ export default function StudentsList() {
           className="w-11 h-11 flex items-center justify-center rounded-lg active:bg-muted transition-colors"
           aria-label="Go back"
         >
-          <CaretLeft size={20} color="var(--color-foreground)" weight="bold" />
+          <ArrowLeft size={20} color="var(--color-foreground)" weight="bold" />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-[18px] font-semibold text-foreground truncate">Students</h1>

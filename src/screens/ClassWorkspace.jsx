@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  CaretLeft, ChatCircle, CheckCircle, ClipboardText, ClockCounterClockwise, FilePlus, Users,
+  ArrowLeft, ChatCircle, CheckCircle, ClipboardText, ClockCounterClockwise, FilePlus, Users,
 } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { useChildNavigation } from '../lib/pageTransitions'
@@ -74,7 +74,6 @@ export default function ClassWorkspace() {
     getClassById,
     getAssignmentsForClass,
     addAssignment,
-    addSyllabusItem,
     rescheduleClass,
   } = useApp()
 
@@ -87,16 +86,10 @@ export default function ClassWorkspace() {
   const [scheduleTime, setScheduleTime] = useState('2:00 PM - 3:00 PM')
   const [scheduleRoom, setScheduleRoom] = useState('Lab 2')
   const [scheduleNote, setScheduleNote] = useState('')
-  const [syllabusExam, setSyllabusExam] = useState('Unit Test')
-  const [syllabusChapter, setSyllabusChapter] = useState('')
-  const [syllabusCoverageType, setSyllabusCoverageType] = useState('full')
-  const [syllabusFrom, setSyllabusFrom] = useState('')
-  const [syllabusTo, setSyllabusTo] = useState('')
 
   if (!cls) return null
 
   const isMarked = cls.attendance === 'marked'
-  const isCollege = currentUser?.role === 'college'
   const nextClassSlot = getNextClassSlot(classId, currentUser?.role)
   const nextClassDay = getDayLabel(nextClassSlot)
   const nextClassTime = nextClassSlot?.startTime ? formatClassTime(nextClassSlot.startTime) : '4:00 PM'
@@ -120,43 +113,24 @@ export default function ClassWorkspace() {
     setSheetMode(null)
   }
 
-  const handleAddSyllabus = () => {
-    if (!syllabusChapter.trim()) return
-    const coverage = syllabusCoverageType === 'full'
-      ? `${syllabusChapter.trim()} · Full chapter`
-      : `${syllabusFrom.trim() || 'Start'} to ${syllabusTo.trim() || 'End'}`
-    addSyllabusItem(classId, {
-      exam: syllabusExam.trim() || 'Test',
-      chapter: syllabusChapter.trim(),
-      coverage,
-      status: isCollege ? 'Added' : 'Test syllabus',
-    })
-    setSyllabusChapter('')
-    setSyllabusCoverageType('full')
-    setSyllabusFrom('')
-    setSyllabusTo('')
-    showToast('Syllabus added')
-    setSheetMode(null)
-  }
-
   const visibleAssignments = assignments.slice(0, 2)
   const sheetTitle = sheetMode === 'assignment'
     ? 'New Assignment'
     : sheetMode === 'reschedule'
     ? 'Reschedule Class'
-    : 'Add Test Syllabus'
+    : 'Class Workspace'
 
   return (
     <div className="h-full flex flex-col bg-stone-50 relative">
       <div className="flex-1 overflow-y-auto pb-28">
-        <section className="relative min-h-[252px] rounded-b-[28px] bg-primary px-7 pt-6">
+        <section className="relative min-h-[268px] rounded-b-[28px] bg-primary px-7 pt-6">
           <div className="flex items-start justify-between">
             <button
               onClick={() => navigate(-1)}
               className="w-12 h-12 -ml-3 flex items-center justify-center rounded-full text-primary-foreground active:bg-white/10 transition-colors"
               aria-label="Back"
             >
-              <CaretLeft size={34} weight="regular" />
+              <ArrowLeft size={26} weight="regular" />
             </button>
 
             <div className="h-10 rounded-full border border-white/20 bg-white/10 text-primary-foreground flex items-center overflow-hidden shadow-sm">
@@ -184,8 +158,8 @@ export default function ClassWorkspace() {
           </div>
 
           <div className="mt-10">
-            <h1 className="text-[23px] leading-tight font-semibold text-primary-foreground tracking-[-0.02em]">{cls.subject}</h1>
-            <p className="text-[14px] text-primary-foreground/75 mt-2 font-medium">{cls.division}</p>
+            <p className="text-[14px] text-primary-foreground/75 font-medium">{cls.division}</p>
+            <h1 className="mt-2 text-[23px] leading-tight font-semibold text-primary-foreground tracking-[-0.02em]">{cls.subject}</h1>
           </div>
 
           <div className="absolute left-7 right-7 -bottom-14 rounded-xl border border-border bg-card px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.08)]">
@@ -195,26 +169,17 @@ export default function ClassWorkspace() {
               <p className="text-[14px] font-semibold text-foreground">{roomLabel}</p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              {isCollege ? (
-                <button
-                  onClick={() => setSheetMode('reschedule')}
-                  className="h-9 rounded-md border border-border bg-background text-[12px] font-medium text-foreground active:bg-muted"
-                >
-                  Reschedule class
-                </button>
-              ) : (
-                <button
-                  onClick={() => setSheetMode('syllabus')}
-                  className="h-9 rounded-md border border-border bg-background text-[12px] font-medium text-foreground active:bg-muted"
-                >
-                  Add syllabus
-                </button>
-              )}
+              <button
+                onClick={() => pushChildPage(`/attendance/${classId}?mode=mark`)}
+                className="h-9 rounded-md border border-border bg-background text-[12px] font-medium text-foreground active:bg-muted"
+              >
+                {isMarked ? 'Edit attendance' : 'Mark Attendance'}
+              </button>
               <button
                 onClick={() => pushChildPage(`/attendance/${classId}`)}
                 className="h-9 rounded-md border border-border bg-background text-[12px] font-medium text-foreground active:bg-muted"
               >
-                {isMarked ? 'Edit attendance' : 'Mark attendance'}
+                History
               </button>
             </div>
           </div>
@@ -222,7 +187,7 @@ export default function ClassWorkspace() {
 
         <main className="px-6 pt-24">
           <div className="flex items-center justify-between">
-            <h2 className="text-[17px] font-semibold text-foreground tracking-[-0.01em]">Assignments</h2>
+            <h2 className="text-[17px] font-bold text-foreground tracking-[-0.01em]">Assignments</h2>
             <button
               onClick={() => setSheetMode('assignment')}
               className="h-8 px-3 rounded-full text-[12px] font-semibold bg-card border border-border text-foreground active:bg-muted"
@@ -231,25 +196,21 @@ export default function ClassWorkspace() {
             </button>
           </div>
 
-          <div className="mt-4 flex flex-col gap-3">
+          <div className="mt-4">
             {visibleAssignments.length === 0 ? (
               <EmptyAssignmentState onCreate={() => setSheetMode('assignment')} />
             ) : (
-              visibleAssignments.map(asgn => (
-                <AssignmentCard
-                  key={asgn.id}
-                  assignment={asgn}
-                  onClick={() => pushChildPage(`/assignment/${asgn.id}?classId=${classId}`)}
-                />
-              ))
+              <div className="divide-y divide-border/70">
+                {visibleAssignments.map(asgn => (
+                  <AssignmentCard
+                    key={asgn.id}
+                    assignment={asgn}
+                    onClick={() => pushChildPage(`/assignment/${asgn.id}?classId=${classId}`)}
+                  />
+                ))}
+              </div>
             )}
           </div>
-
-          {visibleAssignments.length === 1 && (
-            <div className="mt-3">
-              <EmptyAssignmentRow />
-            </div>
-          )}
         </main>
       </div>
 
@@ -335,103 +296,8 @@ export default function ClassWorkspace() {
           </div>
         )}
 
-        {sheetMode === 'syllabus' && (
-          <div className="px-4 pt-4 flex flex-col gap-4">
-            <div>
-              <label className="text-[13px] font-medium text-foreground mb-1.5 block">
-                Test / exam name
-              </label>
-              <Input
-                value={syllabusExam}
-                onChange={e => setSyllabusExam(e.target.value)}
-                placeholder="e.g. Unit Test"
-                className="h-12 rounded-lg text-[15px] border-border"
-              />
-            </div>
-            <div>
-              <label className="text-[13px] font-medium text-foreground mb-1.5 block">
-                Chapter <span className="text-destructive">*</span>
-              </label>
-              <Input
-                value={syllabusChapter}
-                onChange={e => setSyllabusChapter(e.target.value)}
-                placeholder="e.g. Fractions"
-                className="h-12 rounded-lg text-[15px] border-border"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="text-[13px] font-medium text-foreground mb-2 block">
-                Coverage
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSyllabusCoverageType('full')}
-                  className={`h-11 rounded-lg border text-[13px] font-semibold ${
-                    syllabusCoverageType === 'full'
-                      ? 'border-primary bg-brand-tint text-primary'
-                      : 'border-border bg-card text-foreground'
-                  }`}
-                >
-                  Entire chapter
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSyllabusCoverageType('range')}
-                  className={`h-11 rounded-lg border text-[13px] font-semibold ${
-                    syllabusCoverageType === 'range'
-                      ? 'border-primary bg-brand-tint text-primary'
-                      : 'border-border bg-card text-foreground'
-                  }`}
-                >
-                  Page/topic range
-                </button>
-              </div>
-            </div>
-            {syllabusCoverageType === 'range' && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[13px] font-medium text-foreground mb-1.5 block">
-                    From
-                  </label>
-                  <Input
-                    value={syllabusFrom}
-                    onChange={e => setSyllabusFrom(e.target.value)}
-                    placeholder="Page/topic X"
-                    className="h-12 rounded-lg text-[15px] border-border"
-                  />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-foreground mb-1.5 block">
-                    To
-                  </label>
-                  <Input
-                    value={syllabusTo}
-                    onChange={e => setSyllabusTo(e.target.value)}
-                    placeholder="Page/topic Y"
-                    className="h-12 rounded-lg text-[15px] border-border"
-                  />
-                </div>
-              </div>
-            )}
-            <Button
-              className="w-full h-12 text-[15px] font-semibold rounded-lg"
-              onClick={handleAddSyllabus}
-              disabled={!syllabusChapter.trim()}
-            >
-              Add Syllabus
-            </Button>
-          </div>
-        )}
       </BottomSheet>
     </div>
-  )
-}
-
-function EmptyAssignmentRow() {
-  return (
-    <div className="h-[42px] rounded-lg border border-border bg-card" />
   )
 }
 

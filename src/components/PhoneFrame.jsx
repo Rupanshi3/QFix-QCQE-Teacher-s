@@ -5,7 +5,7 @@ export default function PhoneFrame({ children }) {
     <div className="min-h-screen bg-[#e8e8ed] flex items-center justify-center">
       <div
         className="relative bg-white overflow-hidden"
-        style={{ width: '412px', height: '917px', boxShadow: '0 0 40px rgba(0,0,0,0.15)' }}
+        style={{ width: '412px', height: '852px', boxShadow: '0 0 40px rgba(0,0,0,0.15)' }}
       >
         {/* App content */}
         <div id="phone-viewport" className="absolute inset-0 overflow-hidden bg-stone-50">

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  CaretLeft, PaperPlaneTilt, ClipboardText, ChartBar, Plus, Lock,
-  ChatCircle, ChatCircleDots, BookmarkSimple, PaperPlaneRight,
+  ArrowLeft, CaretDown, PaperPlaneTilt, ClipboardText, ChartBar, Plus, Lock,
+  ChatCircle, BookmarkSimple, PaperPlaneRight, MegaphoneSimple, Sparkle,
 } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { formatDueDate, formatDateLabel } from '../lib/utils'
+import { allStudents } from '../data/seed'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,25 +30,119 @@ function groupPostsByDate(posts) {
   return groups
 }
 
+function isHighPriorityPost(post) {
+  return (post.type === 'circular' || post.type === 'announcement') && post.announcementTone === 'priority'
+}
+
+function getPostTag(post) {
+  if (post.type === 'assignment') {
+    return {
+      label: 'Assignment',
+      className: 'bg-amber-50 text-amber-800 border-amber-200',
+    }
+  }
+
+  if (post.type === 'poll') {
+    return {
+      label: 'Poll',
+      className: 'bg-violet-50 text-violet-800 border-violet-200',
+    }
+  }
+
+  if (post.type === 'diary') {
+    return {
+      label: 'E-diary',
+      className: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    }
+  }
+
+  if (post.type === 'reschedule') {
+    return {
+      label: 'Rescheduled',
+      className: 'bg-amber-50 text-amber-800 border-amber-200',
+    }
+  }
+
+  if (isHighPriorityPost(post)) {
+    return {
+      label: 'High priority',
+      className: 'bg-rose-50 text-rose-800 border-rose-200',
+    }
+  }
+
+  if (post.type === 'circular' || post.type === 'announcement') {
+    return {
+      label: post.announcementTone === 'event' ? 'Event' : 'Circular',
+      className: post.announcementTone === 'event'
+        ? 'bg-violet-50 text-violet-800 border-violet-200'
+        : 'bg-sky-50 text-sky-800 border-sky-200',
+    }
+  }
+
+  return {
+    label: 'Message',
+    className: 'bg-muted text-muted-foreground border-border',
+  }
+}
+
+function getAvatarDateParts(dateString) {
+  if (!dateString) {
+    return { day: '--', month: '--' }
+  }
+
+  const parsed = new Date(dateString)
+  if (Number.isNaN(parsed.getTime())) {
+    return { day: '--', month: '--' }
+  }
+
+  return {
+    day: parsed.toLocaleString('en-IN', { day: 'numeric' }),
+    month: parsed.toLocaleString('en-IN', { month: 'short' }),
+  }
+}
+
 const avatarAccentStyle = {
-  backgroundColor: 'var(--color-avatar-accent)',
-  color: 'var(--color-avatar-accent-foreground)',
+  backgroundColor: 'color-mix(in srgb, var(--color-avatar-accent) 10%, white)',
+  color: 'var(--color-primary)',
+  border: '1px solid color-mix(in srgb, var(--color-avatar-accent) 18%, var(--color-border))',
+}
+
+function getAttachmentDetails(post) {
+  const name = post.attachmentName || post.homework || ''
+  const previewUrl = post.attachmentPreviewUrl || ''
+  const type = post.attachmentType || ''
+  const extension = name.split('.').pop()?.toLowerCase() || ''
+  const isImage = type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(extension)
+
+  return { name, previewUrl, type, isImage }
 }
 
 export default function ChannelFeed() {
   const { channelId } = useParams()
   const navigate = useNavigate()
-  const { getChannel, addPost, addAssignment, markChannelRead } = useApp()
+  const { getChannel, getClasses, getClassById, addPost, addAssignment, updatePost, markChannelRead } = useApp()
   const ch = getChannel(channelId)
+  const classes = getClasses()
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [step, setStep] = useState('choose') // 'choose' | 'post' | 'poll' | 'assignment'
+  const [postKind, setPostKind] = useState('circular')
   const [postTitle, setPostTitle] = useState('')
   const [postSubtitle, setPostSubtitle] = useState('')
+  const [postTargetClassId, setPostTargetClassId] = useState('')
+  const [postTargetStudentId, setPostTargetStudentId] = useState('')
+  const [postTone, setPostTone] = useState('message')
+  const [postHomework, setPostHomework] = useState('')
+  const [postAttachmentName, setPostAttachmentName] = useState('')
+  const [postAttachmentType, setPostAttachmentType] = useState('')
+  const [postAttachmentPreviewUrl, setPostAttachmentPreviewUrl] = useState('')
   const [postPollEnabled, setPostPollEnabled] = useState(false)
   const [pollQuestion, setPollQuestion] = useState('')
   const [pollOptions, setPollOptions] = useState(['', ''])
   const [pollDeadline, setPollDeadline] = useState('')
+  const [savedSheetOpen, setSavedSheetOpen] = useState(false)
+  const [savedPostIds, setSavedPostIds] = useState([])
+  const initializedSavedChannelsRef = useRef(new Set())
   const feedRef = useRef(null)
 
   // Mark channel as read on mount
@@ -73,8 +168,16 @@ export default function ChannelFeed() {
   const resetSheet = () => {
     setSheetOpen(false)
     setStep('choose')
+    setPostKind('circular')
     setPostTitle('')
     setPostSubtitle('')
+    setPostTargetClassId(ch?.classId || '')
+    setPostTargetStudentId('')
+    setPostTone('message')
+    setPostHomework('')
+    setPostAttachmentName('')
+    setPostAttachmentType('')
+    setPostAttachmentPreviewUrl('')
     setPostPollEnabled(false)
     setPollQuestion('')
     setPollOptions(['', ''])
@@ -85,9 +188,12 @@ export default function ChannelFeed() {
     if (!postTitle.trim()) return
     const options = pollOptions.map(option => option.trim()).filter(Boolean)
     if (postPollEnabled && (options.length < 2 || !pollDeadline)) return
+    const targetClass = getClassById(postTargetClassId) || getClassById(ch.classId)
+    const targetChannelId = targetClass?.channelId || channelId
+    const targetStudent = allStudents.find(student => String(student.id) === postTargetStudentId)
 
     addPost(
-      channelId,
+      targetChannelId,
       postTitle.trim(),
       postSubtitle.trim(),
       postPollEnabled
@@ -100,7 +206,17 @@ export default function ChannelFeed() {
             })),
             pollDeadline,
           }
-        : {}
+        : {
+            type: postKind,
+            targetClassId: targetClass?.id || ch.classId,
+            targetStudentId: targetStudent?.id || null,
+            targetStudentName: targetStudent?.name || '',
+            announcementTone: postTone,
+            homework: postAttachmentName || postHomework.trim(),
+            attachmentName: postAttachmentName || '',
+            attachmentType: postAttachmentType || '',
+            attachmentPreviewUrl: postAttachmentPreviewUrl || '',
+          }
     )
     showToast('Post sent')
     resetSheet()
@@ -129,17 +245,67 @@ export default function ChannelFeed() {
     resetSheet()
   }
 
+  const handleSaveToggle = (post) => {
+    setSavedPostIds(prev => {
+      const isSaved = prev.includes(post.id)
+      showToast(isSaved ? 'Removed from saved posts' : 'Saved to your study diary')
+      return isSaved ? prev.filter(id => id !== post.id) : [...prev, post.id]
+    })
+  }
+
+  useEffect(() => {
+    if (ch?.classId) {
+      setPostTargetClassId(ch.classId)
+    }
+  }, [ch?.classId])
+
+  useEffect(() => {
+    if (!ch?.id || initializedSavedChannelsRef.current.has(ch.id)) return
+
+    const defaultSavedIds = [...ch.posts]
+      .filter(post => ['circular', 'announcement', 'assignment', 'diary', 'poll'].includes(post.type))
+      .slice(0, 3)
+      .map(post => post.id)
+
+    setSavedPostIds(defaultSavedIds)
+    initializedSavedChannelsRef.current.add(ch.id)
+  }, [ch])
+
   const sheetTitle = step === 'choose'
     ? 'Create New'
     : step === 'post'
-    ? 'New Post'
+    ? postKind === 'diary'
+      ? 'New E-diary'
+      : 'New Circular'
     : step === 'poll'
     ? 'New Poll'
     : 'New Assignment'
 
   // Reverse posts so oldest is at top, newest at bottom (chat convention)
   const chronologicalPosts = [...ch.posts].reverse()
-  const dateGroups = groupPostsByDate(chronologicalPosts)
+  const savedPosts = chronologicalPosts.filter(post => savedPostIds.includes(post.id))
+  const priorityPosts = chronologicalPosts.filter(isHighPriorityPost)
+  const regularPosts = chronologicalPosts.filter(post => !isHighPriorityPost(post))
+  const priorityDateGroups = groupPostsByDate(priorityPosts)
+  const regularDateGroups = groupPostsByDate(regularPosts)
+
+  const renderFeedGroups = (groups) => groups.map(group => (
+    <div key={group.date}>
+      {group.posts.map((post, index) => (
+        <div key={post.id}>
+          <MessageRow
+            post={post}
+            isSaved={savedPostIds.includes(post.id)}
+            onSaveToggle={handleSaveToggle}
+            onUpdatePost={(postId, updates) => updatePost(channelId, postId, updates)}
+          />
+          {index < group.posts.length - 1 && (
+            <div className="my-4 h-px bg-border" />
+          )}
+        </div>
+      ))}
+    </div>
+  ))
 
   return (
     <div className="h-full flex flex-col bg-stone-50 relative">
@@ -150,7 +316,7 @@ export default function ChannelFeed() {
           className="w-11 h-11 flex items-center justify-center rounded-lg active:bg-muted transition-colors flex-shrink-0"
           aria-label="Go back"
         >
-          <CaretLeft size={20} color="var(--color-foreground)" weight="bold" />
+          <ArrowLeft size={20} color="var(--color-foreground)" weight="bold" />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-[17px] font-semibold text-foreground truncate">{ch.name}</h1>
@@ -161,6 +327,23 @@ export default function ChannelFeed() {
             </div>
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => setSavedSheetOpen(true)}
+          className="relative w-11 h-11 flex items-center justify-center rounded-lg active:bg-muted transition-colors flex-shrink-0"
+          aria-label="Saved posts"
+        >
+          <BookmarkSimple
+            size={20}
+            weight={savedPosts.length > 0 ? 'fill' : 'bold'}
+            className={savedPosts.length > 0 ? 'text-primary' : 'text-muted-foreground'}
+          />
+          {savedPosts.length > 0 && (
+            <span className="absolute right-2 top-2 h-4 min-w-4 rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+              {savedPosts.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Feed — grouped by date, oldest top, newest bottom */}
@@ -182,30 +365,19 @@ export default function ChannelFeed() {
             )}
           </div>
         ) : (
-          dateGroups.map(group => (
-            <div key={group.date}>
-              {/* Date separator */}
-              <div className="flex items-center gap-3 my-3">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs font-semibold text-muted-foreground flex-shrink-0">
-                  {group.label}
-                </span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
+          <>
+            {priorityDateGroups.length > 0 && renderFeedGroups(priorityDateGroups)}
 
-              {/* Messages in this date group */}
-              <div className="flex flex-col">
-                {group.posts.map((post, index) => (
-                  <div key={post.id}>
-                    <MessageRow post={post} />
-                    {index < group.posts.length - 1 && (
-                      <div className="my-4 h-px bg-border" />
-                    )}
-                  </div>
-                ))}
+            {priorityDateGroups.length > 0 && regularDateGroups.length > 0 && (
+              <div className="my-6 flex items-center gap-3">
+                <div className="flex-1 h-px bg-border/80" />
+                <span className="text-[13px] font-bold text-muted-foreground">Other updates</span>
+                <div className="flex-1 h-px bg-border/80" />
               </div>
-            </div>
-          ))
+            )}
+
+            {renderFeedGroups(regularDateGroups)}
+          </>
         )}
       </div>
 
@@ -220,6 +392,53 @@ export default function ChannelFeed() {
         </button>
       )}
 
+      <BottomSheet
+        isOpen={savedSheetOpen}
+        onClose={() => setSavedSheetOpen(false)}
+        title="Saved posts"
+        subtitle={ch.name}
+        floatingCloseButton
+      >
+        <div className="px-4 pt-4 pb-4">
+          {savedPosts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-8 text-center">
+              <BookmarkSimple size={24} weight="bold" className="mx-auto text-muted-foreground" />
+              <p className="mt-3 text-[15px] font-semibold text-foreground">No saved posts yet</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Saved class posts will appear here for quick reference.
+              </p>
+            </div>
+          ) : (
+            <ul className="list-none divide-y divide-border">
+              {savedPosts.map(post => {
+                const tag = getPostTag(post)
+
+                return (
+                  <li key={post.id} className="py-3">
+                    <div className="flex items-center gap-2">
+                      <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-foreground">
+                        {post.title || post.content}
+                      </p>
+                      <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tag.className}`}>
+                        {tag.label}
+                      </span>
+                    </div>
+                    {post.subtitle && (
+                      <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-muted-foreground">
+                        {post.subtitle}
+                      </p>
+                    )}
+                    <p className="mt-1 text-[12px] text-muted-foreground">
+                      {formatDateLabel(post.date)}
+                    </p>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </BottomSheet>
+
       {/* Bottom Sheet */}
       <BottomSheet
         isOpen={sheetOpen}
@@ -231,15 +450,18 @@ export default function ChannelFeed() {
         {step === 'choose' && (
           <div className="px-4 pt-4 flex flex-col gap-3">
             <button
-              onClick={() => setStep('post')}
+              onClick={() => {
+                setPostKind('circular')
+                setStep('post')
+              }}
               className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card active:bg-muted transition-colors text-left"
             >
               <div className="w-11 h-11 rounded-full bg-brand-tint flex items-center justify-center flex-shrink-0">
-                <PaperPlaneTilt size={20} weight="fill" className="text-primary" />
+                <MegaphoneSimple size={20} weight="fill" className="text-primary" />
               </div>
               <div>
-                <p className="text-[15px] font-semibold text-foreground">Post</p>
-                <p className="text-[13px] text-muted-foreground mt-0.5">Share an update with the class</p>
+                <p className="text-[15px] font-semibold text-foreground">Circulars</p>
+                <p className="text-[13px] text-muted-foreground mt-0.5">Send a class update with homework, priority, or event marking</p>
               </div>
             </button>
             <button
@@ -266,6 +488,21 @@ export default function ChannelFeed() {
                 <p className="text-[13px] text-muted-foreground mt-0.5">Ask students to vote before a deadline</p>
               </div>
             </button>
+            <button
+              onClick={() => {
+                setPostKind('diary')
+                setStep('post')
+              }}
+              className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card active:bg-muted transition-colors text-left"
+            >
+              <div className="w-11 h-11 rounded-full bg-brand-tint flex items-center justify-center flex-shrink-0">
+                <Sparkle size={20} weight="fill" className="text-primary" />
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-foreground">E-diary</p>
+                <p className="text-[13px] text-muted-foreground mt-0.5">Create a diary note for a class or a selected student</p>
+              </div>
+            </button>
           </div>
         )}
 
@@ -273,27 +510,119 @@ export default function ChannelFeed() {
           <div className="px-4 pt-4 flex flex-col gap-4">
             <div>
               <label className="text-[13px] font-medium text-foreground mb-1.5 block">
+                Class <span className="text-destructive">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={postTargetClassId}
+                  onChange={e => setPostTargetClassId(e.target.value)}
+                  className="h-12 w-full appearance-none rounded-lg border border-border bg-background px-3 pr-10 text-[15px] font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  {classes.map(cls => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.displayName}
+                    </option>
+                  ))}
+                </select>
+                <CaretDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              </div>
+            </div>
+
+            {postKind === 'diary' && (
+              <div>
+                <label className="text-[13px] font-medium text-foreground mb-1.5 block">
+                  Student <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={postTargetStudentId}
+                    onChange={e => setPostTargetStudentId(e.target.value)}
+                    className="h-12 w-full appearance-none rounded-lg border border-border bg-background px-3 pr-10 text-[15px] font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    <option value="">Entire class diary</option>
+                    {allStudents.map(student => (
+                      <option key={student.id} value={student.id}>
+                        {student.name}
+                      </option>
+                    ))}
+                  </select>
+                  <CaretDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="text-[13px] font-medium text-foreground mb-1.5 block">
                 Title <span className="text-destructive">*</span>
               </label>
               <Input
                 value={postTitle}
                 onChange={e => setPostTitle(e.target.value)}
-                placeholder="e.g. Tomorrow's class is cancelled"
+                placeholder={postKind === 'diary' ? 'e.g. Homework for tomorrow' : "e.g. Tomorrow's class timing is updated"}
                 className="h-12 rounded-lg text-[15px] border-border"
                 autoFocus
               />
             </div>
             <div>
               <label className="text-[13px] font-medium text-foreground mb-1.5 block">
-                Description <span className="text-muted-foreground font-normal">(optional)</span>
+                {postKind === 'diary' ? 'Diary note' : 'Message'} <span className="text-muted-foreground font-normal">(optional)</span>
               </label>
               <Textarea
                 value={postSubtitle}
                 onChange={e => setPostSubtitle(e.target.value)}
-                placeholder="Add more details…"
+                placeholder={postKind === 'diary' ? 'Add reminders, notebook notes, or student-specific details…' : 'Add the main circular, reminder, or instruction…'}
                 rows={3}
                 className="rounded-lg text-[15px] border-border resize-none"
               />
+            </div>
+
+            <div>
+              <label className="text-[13px] font-medium text-foreground mb-1.5 block">
+                Homework attachment <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <label className="flex h-12 w-full cursor-pointer items-center rounded-lg border border-border bg-background px-3 text-[15px] text-muted-foreground">
+                <span className="truncate">{postAttachmentName || 'Choose a file'}</span>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    setPostAttachmentName(file?.name || '')
+                    setPostAttachmentType(file?.type || '')
+                    setPostAttachmentPreviewUrl(file && file.type.startsWith('image/') ? URL.createObjectURL(file) : '')
+                  }}
+                  className="sr-only"
+                />
+              </label>
+              <p className="mt-1.5 text-[12px] text-muted-foreground">
+                Supported formats: PDF, DOC, DOCX, PPT, PPTX, JPG, PNG. Max file size: 10MB.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4">
+              <label className="text-[13px] font-medium text-foreground mb-2 block">
+                Mark as
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'message', label: 'Message' },
+                  { value: 'priority', label: 'Priority' },
+                  { value: 'event', label: 'Event' },
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setPostTone(option.value)}
+                    className={`h-11 rounded-lg border text-[13px] font-semibold ${
+                      postTone === option.value
+                        ? 'border-primary bg-brand-tint text-primary'
+                        : 'border-border bg-background text-foreground'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-4">
@@ -433,20 +762,28 @@ export default function ChannelFeed() {
   )
 }
 
-function MessageRow({ post }) {
+function MessageRow({ post, isSaved, onSaveToggle, onUpdatePost }) {
+  const { currentUser } = useApp()
   const [replyingTo, setReplyingTo] = useState(null)
   const [resolvedDoubtIds, setResolvedDoubtIds] = useState([])
   const [teacherReplies, setTeacherReplies] = useState({})
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState(post.title || post.content || '')
+  const [editSubtitle, setEditSubtitle] = useState(post.subtitle || '')
   const [commentText, setCommentText] = useState('')
   const [teacherComments, setTeacherComments] = useState([])
-  const [isSaved, setIsSaved] = useState(false)
   const [reactionCount, setReactionCount] = useState(post.reactions || 0)
   const [hasReacted, setHasReacted] = useState(false)
   const commentInputRef = useRef(null)
   const isAssignment = post.type === 'assignment'
   const isPoll = post.type === 'poll'
   const isReschedule = post.type === 'reschedule'
+  const isCircular = post.type === 'circular' || post.type === 'announcement'
+  const isDiary = post.type === 'diary'
+  const postTag = getPostTag(post)
+  const attachment = getAttachmentDetails(post)
+  const avatarDate = getAvatarDateParts(post.date)
   const dueLabel = formatDueDate(post.dueDate)
   const totalVotes = post.pollOptions?.reduce((sum, option) => sum + option.votes, 0) || 0
   const doubts = (post.doubts || []).map(doubt => ({
@@ -484,14 +821,6 @@ function MessageRow({ post }) {
     showToast('Doubt resolved')
   }
 
-  const handleSaveToggle = () => {
-    setIsSaved(prev => {
-      const next = !prev
-      showToast(next ? 'Saved to your study diary' : 'Removed from study diary')
-      return next
-    })
-  }
-
   const handleCommentSubmit = () => {
     if (!commentText.trim()) return
     if (replyingTo) {
@@ -513,6 +842,17 @@ function MessageRow({ post }) {
   const handleReactionToggle = () => {
     setReactionCount(prev => hasReacted ? Math.max(0, prev - 1) : prev + 1)
     setHasReacted(prev => !prev)
+  }
+
+  const handleEditSave = () => {
+    if (!editTitle.trim()) return
+    onUpdatePost(post.id, {
+      title: editTitle.trim(),
+      content: editTitle.trim(),
+      subtitle: editSubtitle.trim(),
+    })
+    showToast('Post updated')
+    setEditOpen(false)
   }
 
   useEffect(() => {
@@ -538,42 +878,47 @@ function MessageRow({ post }) {
 
   return (
     <>
-      <div className="flex gap-2.5 px-1 py-1.5 rounded-lg transition-colors">
-        {/* Avatar */}
-        <Avatar className="w-9 h-9 flex-shrink-0 mt-0.5">
-          <AvatarFallback className="text-[12px] font-bold" style={avatarAccentStyle}>
-            {post.authorInitial}
+      <div className="flex gap-3 px-1 py-2 transition-colors">
+        <Avatar className="h-11 w-11 flex-shrink-0 rounded-xl">
+          <AvatarFallback
+            className="flex h-full w-full flex-col items-center justify-center rounded-xl leading-none"
+            style={avatarAccentStyle}
+          >
+            <span className="text-[13px] font-bold text-current">{avatarDate.day}</span>
+            <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-current/80">
+              {avatarDate.month}
+            </span>
           </AvatarFallback>
         </Avatar>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Author + time inline */}
-          <div className="flex items-center gap-2 min-h-6">
-            <span className="text-sm font-bold text-foreground leading-tight">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-h-6 items-center gap-2">
+            <span className="truncate text-[16px] font-bold leading-tight text-foreground">
               {post.author}
             </span>
-            <span className="text-[11px] text-muted-foreground leading-tight">
-              {post.time}
+            {isDiary && (
+              <span className="truncate text-[12px] font-medium leading-tight text-primary/80">
+                @{post.targetStudentName || 'class'}
+              </span>
+            )}
+            <span className={`ml-auto inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${postTag.className}`}>
+              {postTag.label}
             </span>
           </div>
 
         {/* Message body */}
         {isAssignment ? (
-          <div className="bg-muted rounded-lg p-3 mt-1.5">
+          <div className="mt-1">
             <p className="text-sm font-semibold text-foreground">{post.title || post.content}</p>
             {post.subtitle && (
               <p className="text-sm text-muted-foreground mt-1">{post.subtitle}</p>
             )}
             <div className="flex items-center justify-between mt-2">
               <p className="text-[12px] text-muted-foreground">{dueLabel}</p>
-              <Badge className="text-[10px] font-medium bg-brand-tint text-primary border-none">
-                {post.submitted}/{post.total} submitted
-              </Badge>
             </div>
           </div>
         ) : isPoll ? (
-          <div className="bg-muted rounded-lg p-3 mt-1.5">
+          <div className="mt-1">
             <p className="text-sm font-semibold text-foreground">{post.title || post.content}</p>
             <div className="flex flex-col gap-2 mt-3">
               {post.pollOptions?.map(option => {
@@ -603,8 +948,34 @@ function MessageRow({ post }) {
               </Badge>
             </div>
           </div>
+        ) : isCircular ? (
+          <div className="mt-1">
+            <p className="text-sm font-semibold text-foreground">{post.title || post.content}</p>
+            {post.subtitle && (
+              <p className="text-sm leading-relaxed mt-1 text-foreground/80">{post.subtitle}</p>
+            )}
+            {attachment.isImage && attachment.previewUrl && (
+              <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card">
+                <img src={attachment.previewUrl} alt={attachment.name || post.title || 'Attachment'} className="h-44 w-full object-cover" />
+              </div>
+            )}
+          </div>
+        ) : isDiary ? (
+          <div className="mt-1">
+            <p className={`${post.targetStudentName ? 'mt-1' : 'mt-1.5'} text-sm font-semibold text-foreground`}>
+              {post.title || post.content}
+            </p>
+            {post.subtitle && (
+              <p className="text-sm leading-relaxed mt-1 text-foreground/80">{post.subtitle}</p>
+            )}
+            {attachment.isImage && attachment.previewUrl && (
+              <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card">
+                <img src={attachment.previewUrl} alt={attachment.name || post.title || 'Attachment'} className="h-44 w-full object-cover" />
+              </div>
+            )}
+          </div>
         ) : isReschedule ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-1.5">
+          <div className="mt-1">
             <p className="text-sm font-semibold text-foreground">{post.title || post.content}</p>
             {post.subtitle && (
               <p className="text-sm text-amber-900/80 leading-relaxed mt-1">{post.subtitle}</p>
@@ -651,7 +1022,14 @@ function MessageRow({ post }) {
               )}
               <button
                 type="button"
-                onClick={handleSaveToggle}
+                onClick={() => setEditOpen(true)}
+                className="min-h-8 inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground active:text-primary"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => onSaveToggle(post)}
                 className={`min-h-8 inline-flex items-center gap-1.5 text-[12px] font-semibold ${
                   isSaved ? 'text-primary' : 'text-muted-foreground'
                 }`}
@@ -681,26 +1059,6 @@ function MessageRow({ post }) {
               <p className="text-[13px] text-muted-foreground mt-1">{post.subtitle}</p>
             )}
           </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <ChatCircleDots size={15} weight="fill" className="text-primary" />
-              <p className="text-[13px] font-semibold text-foreground">Doubts & comments</p>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              {pendingDoubts > 0 && (
-                <Badge className="text-[10px] bg-orange-100 text-orange-800 border-none">
-                  {pendingDoubts} pending
-                </Badge>
-              )}
-              {resolvedDoubts > 0 && (
-                <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border-none">
-                  {resolvedDoubts} resolved
-                </Badge>
-              )}
-            </div>
-          </div>
-
           {allComments.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center">
               <p className="text-[14px] font-semibold text-foreground">No comments yet</p>
@@ -737,36 +1095,22 @@ function MessageRow({ post }) {
                             <button
                               type="button"
                               onClick={() => focusReplyComposer(doubt.id)}
-                              className="text-[12px] font-semibold text-muted-foreground active:text-primary"
+                              className="text-[12px] font-semibold text-primary active:opacity-70"
                             >
                               Reply
                             </button>
-                            <Badge className={`text-[10px] border-none ${
-                              isResolved
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-orange-100 text-orange-800'
-                            }`}>
-                              {isResolved ? 'Resolved' : 'Pending'}
-                            </Badge>
                           </div>
                         )}
 
                         {doubt.teacherReply && (
                           <div className="mt-2 ml-3 border-l border-border pl-3">
-                            <p className="text-[12px] font-semibold text-primary">Teacher reply</p>
+                            <p className="text-[12px] font-semibold text-primary">
+                              {currentUser?.name || 'Teacher'}
+                            </p>
                             <p className="text-[13px] text-foreground mt-0.5">{doubt.teacherReply}</p>
                           </div>
                         )}
 
-                        {!isTeacherNote && !isResolved && !isReplying && (
-                          <button
-                            type="button"
-                            onClick={() => focusReplyComposer(doubt.id)}
-                            className="mt-2 h-8 px-3 rounded-lg bg-muted text-[12px] font-semibold text-primary active:bg-background"
-                          >
-                            Reply
-                          </button>
-                        )}
                       </div>
                     </div>
                   )
@@ -801,6 +1145,38 @@ function MessageRow({ post }) {
               </button>
             </div>
           </div>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit post">
+        <div className="px-4 pt-4 pb-4 flex flex-col gap-4">
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-foreground">Title</label>
+            <Input
+              value={editTitle}
+              onChange={e => setEditTitle(e.target.value)}
+              className="h-12 rounded-lg text-[15px] border-border"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-foreground">
+              Message <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <Textarea
+              value={editSubtitle}
+              onChange={e => setEditSubtitle(e.target.value)}
+              rows={3}
+              className="rounded-lg text-[15px] border-border resize-none"
+            />
+          </div>
+          <Button
+            className="w-full h-12 rounded-lg text-[15px] font-semibold"
+            onClick={handleEditSave}
+            disabled={!editTitle.trim()}
+          >
+            Save changes
+          </Button>
         </div>
       </BottomSheet>
     </>

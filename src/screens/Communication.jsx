@@ -42,11 +42,11 @@ export default function Communication() {
     const adminChannels = visibleChannels.filter(({ isBroadcast }) => isBroadcast)
     const classChannels = visibleChannels.filter(({ isBroadcast }) => !isBroadcast)
 
-    const renderChannelItem = ({ avatarLetter, ch, classColor, divisionLabel, hasUnread, isBroadcast, lastPost }) => (
-      <li key={ch.id}>
+    const renderChannelItem = ({ avatarLetter, ch, classColor, divisionLabel, hasUnread, isBroadcast, lastPost }, index, channels) => (
+      <li key={ch.id} className={index < channels.length - 1 ? 'border-b border-border/60' : ''}>
         <Link
           {...childLinkProps(`/channel/${ch.id}`)}
-          className="block px-3 py-3 flex items-start gap-3 rounded-xl active:bg-muted/60 transition-colors"
+          className="block px-4 py-3 flex items-start gap-3 active:bg-muted/40 transition-colors"
         >
           <Avatar className="w-10 h-10 flex-shrink-0">
             <AvatarFallback
@@ -94,20 +94,16 @@ export default function Communication() {
       </li>
     )
 
-    const renderSection = (title, description, channels, accentClass = '') => {
+    const renderSection = (title, channels) => {
       if (channels.length === 0) return null
 
       return (
-        <section className="px-4">
-          <div className="mb-2 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{title}</p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">{description}</p>
-            </div>
-            <span className="text-[12px] font-semibold text-muted-foreground">{channels.length}</span>
+        <section>
+          <div className="mb-2 px-4">
+            <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{title}</p>
           </div>
-          <ul className={`flex flex-col list-none rounded-2xl border border-border/80 bg-card shadow-sm overflow-hidden ${accentClass}`}>
-            {channels.map(renderChannelItem)}
+          <ul className="flex flex-col list-none">
+            {channels.map((channel, index) => renderChannelItem(channel, index, channels))}
           </ul>
         </section>
       )
@@ -123,18 +119,9 @@ export default function Communication() {
     }
 
     return (
-      <div className="flex flex-col gap-5">
-        {renderSection(
-          isCollege ? 'College administration' : 'Administration',
-          isCollege ? 'Department notices and official updates' : 'Official announcements and staff updates',
-          adminChannels,
-          'bg-warning/5'
-        )}
-        {renderSection(
-          isCollege ? 'College class chats' : 'Class chats',
-          isCollege ? 'Batch-wise subject spaces for students and faculty' : 'Subject-wise spaces for students and teachers',
-          classChannels
-        )}
+      <div className="flex flex-col gap-6">
+        {renderSection(isCollege ? 'College administration' : 'Administration', adminChannels)}
+        {renderSection(isCollege ? 'College class chats' : 'Class chats', classChannels)}
       </div>
     )
   }
@@ -175,7 +162,7 @@ export default function Communication() {
         </>
       ) : (
         <>
-          <div className="px-4 pb-3">
+          <div className="px-4 pb-6">
             <div
               className="flex items-center gap-2 bg-card border border-border rounded-lg h-11 px-3 cursor-pointer"
               onClick={() => setIsSearching(true)}

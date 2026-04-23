@@ -248,6 +248,18 @@ export function AppProvider({ children }) {
     }))
   }, [currentUser])
 
+  const updatePost = useCallback((channelId, postId, updates) => {
+    setChannelsState(prev => ({
+      ...prev,
+      [channelId]: {
+        ...prev[channelId],
+        posts: (prev[channelId]?.posts || []).map(post =>
+          post.id === postId ? { ...post, ...updates } : post
+        ),
+      },
+    }))
+  }, [])
+
   const markChannelRead = useCallback((channelId) => {
     setChannelsState(prev => ({
       ...prev,
@@ -277,6 +289,7 @@ export function AppProvider({ children }) {
       getChannelOrder,
       getChannel,
       addPost,
+      updatePost,
       markChannelRead,
       allStudents,
     }}>

@@ -141,7 +141,11 @@ export default function AssignmentsTab() {
               className="w-full text-left px-1 py-2 flex items-center justify-between"
             >
               <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wide">Closed ({closed.length})</span>
-              <span className="text-[13px] text-muted-foreground">{showClosed ? '▲' : '▼'}</span>
+              <CaretDown
+                size={14}
+                weight="bold"
+                className={`text-muted-foreground transition-transform ${showClosed ? 'rotate-180' : ''}`}
+              />
             </button>
             {showClosed && closed.map(asgn => (
               <Link

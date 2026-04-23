@@ -52,7 +52,6 @@ export default function Profile() {
           <hr className="border-border" />
 
           <InfoRow label="School Name" value={currentUser.institute} />
-          <InfoRow label="School Admin" value={currentUser.adminName} />
 
           <p className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wide">Help & admin</p>
           <div className="flex flex-col divide-y divide-border">
@@ -60,12 +59,11 @@ export default function Profile() {
               href={`mailto:${currentUser.email}?subject=Admin support request`}
               className="py-3 flex items-center gap-3 active:bg-muted transition-colors"
             >
-              <div className="w-10 h-10 rounded-lg bg-brand-tint flex items-center justify-center flex-shrink-0">
-                <EnvelopeSimple size={20} weight="fill" className="text-primary" />
+              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                <EnvelopeSimple size={20} className="text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-semibold text-foreground">Contact admin</p>
-                <p className="text-[13px] text-muted-foreground truncate">{currentUser.adminName}</p>
               </div>
             </a>
             <a

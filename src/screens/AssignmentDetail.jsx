@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CaretLeft, Bell, CaretDown, DotsThreeVertical, Lock, Warning } from '@phosphor-icons/react'
+import { ArrowLeft, Bell, CaretDown, DotsThreeVertical, Lock, Warning } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { submissionDetail } from '../data/seed'
 import { formatDueDate } from '../lib/utils'
@@ -62,7 +62,7 @@ export default function AssignmentDetail() {
       {/* Header */}
       <div className="bg-card border-b border-border px-4 pt-3 pb-3 flex items-center gap-3 flex-shrink-0">
         <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-lg active:bg-muted transition-colors" aria-label="Go back">
-          <CaretLeft size={20} color="var(--color-foreground)" weight="bold" />
+          <ArrowLeft size={20} color="var(--color-foreground)" weight="bold" />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-[18px] font-semibold text-foreground truncate">{assignment.title}</h1>
@@ -113,16 +113,16 @@ export default function AssignmentDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="submitted" className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="w-full rounded-none border-b border-border bg-card h-auto p-0">
+        <TabsList className="mx-4 mt-3 w-auto rounded-full border border-border/60 bg-muted h-11 p-1 gap-1">
           <TabsTrigger
             value="submitted"
-            className="flex-1 py-3 text-[15px] font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=inactive]:text-muted-foreground bg-transparent shadow-none"
+            className="h-full flex-1 rounded-full text-[14px] font-semibold bg-transparent shadow-none data-[state=active]:!bg-primary data-[state=active]:!text-primary-foreground data-[state=inactive]:text-muted-foreground"
           >
             Submitted ({submittedList.length})
           </TabsTrigger>
           <TabsTrigger
             value="pending"
-            className="flex-1 py-3 text-[15px] font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=inactive]:text-muted-foreground bg-transparent shadow-none"
+            className="h-full flex-1 rounded-full text-[14px] font-semibold bg-transparent shadow-none data-[state=active]:!bg-primary data-[state=active]:!text-primary-foreground data-[state=inactive]:text-muted-foreground"
           >
             Pending ({pendingList.length})
           </TabsTrigger>
@@ -130,7 +130,7 @@ export default function AssignmentDetail() {
 
         <TabsContent value="submitted" className="flex-1 overflow-y-auto px-4 pt-4 pb-4 mt-0">
           <div className="flex flex-col gap-4">
-            <section className="bg-card border border-border rounded-xl overflow-hidden">
+            <section className="bg-card rounded-xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowGraded(prev => !prev)}
@@ -147,9 +147,9 @@ export default function AssignmentDetail() {
                 />
               </button>
               {showGraded && (
-                <ul className="px-4 pb-4 flex flex-col gap-3 list-none">
+                <ul className="px-4 pb-4 list-none divide-y divide-border">
                   {gradedList.map(student => (
-                    <li key={student.id} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3">
+                    <li key={student.id} className="flex items-center gap-3 py-3">
                       <Avatar className="w-9 h-9 flex-shrink-0">
                         <AvatarFallback className="text-[13px] font-bold" style={avatarAccentStyle}>
                           {student.name.charAt(0)}
@@ -159,17 +159,13 @@ export default function AssignmentDetail() {
                         <p className="text-[15px] font-medium text-foreground truncate">{student.name}</p>
                         <p className="text-[13px] text-muted-foreground">{student.time}</p>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-[13px] font-semibold text-foreground">{student.grade}</p>
-                        <p className="text-[11px] text-muted-foreground">Graded</p>
-                      </div>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
 
-            <section className="bg-card border border-border rounded-xl overflow-hidden">
+            <section className="bg-card rounded-xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowUngraded(prev => !prev)}
@@ -186,9 +182,9 @@ export default function AssignmentDetail() {
                 />
               </button>
               {showUngraded && (
-                <ul className="px-4 pb-4 flex flex-col gap-3 list-none">
+                <ul className="px-4 pb-4 list-none divide-y divide-border">
                   {ungradedList.map(student => (
-                    <li key={student.id} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3">
+                    <li key={student.id} className="flex items-center gap-3 py-3">
                       <Avatar className="w-9 h-9 flex-shrink-0">
                         <AvatarFallback className="text-[13px] font-bold" style={avatarAccentStyle}>
                           {student.name.charAt(0)}
@@ -215,9 +211,9 @@ export default function AssignmentDetail() {
               <Lock size={13} color="var(--color-warning)" className="ml-auto" />
             </div>
           )}
-          <ul className="flex flex-col gap-3 list-none">
+          <ul className="list-none divide-y divide-border">
             {pendingList.map(student => (
-              <li key={student.id} className={`bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3 ${isOverdue ? 'opacity-60' : ''}`}>
+              <li key={student.id} className={`flex items-center gap-3 py-3 ${isOverdue ? 'opacity-60' : ''}`}>
                 <Avatar className="w-9 h-9 flex-shrink-0">
                   <AvatarFallback className="text-[13px] font-bold" style={avatarAccentStyle}>
                     {student.name.charAt(0)}
