@@ -15,6 +15,10 @@ import MyClasses from './screens/MyClasses'
 import AssignmentsTab from './screens/AssignmentsTab'
 import Profile from './screens/Profile'
 import StudentsList from './screens/StudentsList'
+import ScheduleView from './screens/ScheduleView'
+import Reports from './screens/Reports'
+import TimetableBuilder from './screens/TimetableBuilder'
+import StaffDirectory from './screens/StaffDirectory'
 import { getLocationDepth } from './lib/pageTransitions'
 
 function ProtectedRoute({ children }) {
@@ -28,6 +32,10 @@ function RouteTree({ location }) {
     <Routes location={location}>
       <Route path="/" element={<Login />} />
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/schedule" element={<ProtectedRoute><ScheduleView /></ProtectedRoute>} />
+      <Route path="/schedule/timetable" element={<ProtectedRoute><TimetableBuilder /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+      <Route path="/staff-directory" element={<ProtectedRoute><StaffDirectory /></ProtectedRoute>} />
       <Route path="/workspace/:classId" element={<ProtectedRoute><ClassWorkspace /></ProtectedRoute>} />
       <Route path="/attendance/:classId" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
       <Route path="/students/:classId" element={<ProtectedRoute><StudentsList /></ProtectedRoute>} />

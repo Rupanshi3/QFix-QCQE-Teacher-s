@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, ChatCircle, CheckCircle, ClipboardText, ClockCounterClockwise, FilePlus, Users,
+  ArrowLeft, ChatCircle, ClipboardText, FilePlus,
 } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { useChildNavigation } from '../lib/pageTransitions'
@@ -123,8 +123,8 @@ export default function ClassWorkspace() {
   return (
     <div className="h-full flex flex-col bg-stone-50 relative">
       <div className="flex-1 overflow-y-auto pb-28">
-        <section className="relative min-h-[268px] rounded-b-[28px] bg-primary px-7 pt-6">
-          <div className="flex items-start justify-between">
+        <section className="relative min-h-[196px] rounded-b-[28px] bg-primary px-7 pt-6">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => navigate(-1)}
               className="w-12 h-12 -ml-3 flex items-center justify-center rounded-full text-primary-foreground active:bg-white/10 transition-colors"
@@ -132,34 +132,9 @@ export default function ClassWorkspace() {
             >
               <ArrowLeft size={26} weight="regular" />
             </button>
-
-            <div className="h-10 rounded-full border border-white/20 bg-white/10 text-primary-foreground flex items-center overflow-hidden shadow-sm">
-              <button
-                onClick={() => pushChildPage(`/students/${classId}`)}
-                className="h-full px-3 flex items-center gap-1.5 text-[12px] font-semibold active:bg-white/10"
-                aria-label={`${cls.totalStudents} enrolled students`}
-              >
-                <Users size={17} weight="bold" />
-                {cls.totalStudents}
-              </button>
-              <span className="h-5 w-px bg-white/30" />
-              <button
-                onClick={() => pushChildPage(`/attendance/${classId}`)}
-                className="h-full px-3 flex items-center text-[12px] font-semibold active:bg-white/10"
-                aria-label="Attendance history"
-              >
-                {isMarked ? (
-                  <CheckCircle size={17} weight="fill" />
-                ) : (
-                  <ClockCounterClockwise size={17} weight="bold" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-10">
-            <p className="text-[14px] text-primary-foreground/75 font-medium">{cls.division}</p>
-            <h1 className="mt-2 text-[23px] leading-tight font-semibold text-primary-foreground tracking-[-0.02em]">{cls.subject}</h1>
+            <h1 className="min-w-0 truncate text-[23px] leading-tight font-semibold tracking-[-0.02em] text-primary-foreground">
+              {cls.subject}
+            </h1>
           </div>
 
           <div className="absolute left-7 right-7 -bottom-14 rounded-xl border border-border bg-card px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.08)]">
