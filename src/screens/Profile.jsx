@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { EnvelopeSimple, Lifebuoy, SignOut } from '@phosphor-icons/react'
+import { AddressBook, EnvelopeSimple, Lifebuoy, SignOut, Student } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import BottomNav from '../components/BottomNav'
 import { Badge } from '@/components/ui/badge'
@@ -17,9 +17,11 @@ function InfoRow({ label, value }) {
 
 export default function Profile() {
   const navigate = useNavigate()
-  const { currentUser, logout, switchRole } = useApp()
+  const { currentUser, logout, switchRole, getClasses } = useApp()
 
   if (!currentUser) return null
+  const classes = getClasses()
+  const firstClassId = classes[0]?.id
 
   const handleLogout = () => { logout(); navigate('/') }
 
@@ -52,6 +54,36 @@ export default function Profile() {
           <hr className="border-border" />
 
           <InfoRow label="School Name" value={currentUser.institute} />
+
+          <p className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wide">Directory</p>
+          <div className="flex flex-col divide-y divide-border">
+            <button
+              type="button"
+              onClick={() => navigate('/staff-directory')}
+              className="py-3 flex items-center gap-3 text-left active:bg-muted transition-colors"
+            >
+              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                <AddressBook size={20} className="text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-foreground">Staff directory</p>
+                <p className="text-[13px] text-muted-foreground">Faculty and administration contacts</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => firstClassId && navigate(`/students/${firstClassId}`)}
+              className="py-3 flex items-center gap-3 text-left active:bg-muted transition-colors"
+            >
+              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                <Student size={20} className="text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-foreground">Student list</p>
+                <p className="text-[13px] text-muted-foreground">Open the class-wise student directory</p>
+              </div>
+            </button>
+          </div>
 
           <p className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wide">Help & admin</p>
           <div className="flex flex-col divide-y divide-border">

@@ -12,6 +12,10 @@ function getDefaultDepth(pathname) {
     return 0
   }
 
+  if (pathname === '/schedule') return 1
+  if (pathname === '/reports') return 1
+  if (pathname === '/staff-directory') return 1
+  if (pathname === '/schedule/timetable') return 2
   if (pathname.startsWith('/workspace/')) return 1
   if (pathname.startsWith('/attendance/')) return 2
   if (pathname.startsWith('/students/')) return 2

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, CaretDown, PaperPlaneTilt, ClipboardText, ChartBar, Plus, Lock,
-  ChatCircle, BookmarkSimple, PaperPlaneRight, MegaphoneSimple, Sparkle,
+  ChatCircle, BookmarkSimple, PaperPlaneRight, MegaphoneSimple, Sparkle, PencilSimple,
 } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { formatDueDate, formatDateLabel } from '../lib/utils'
@@ -1025,6 +1025,7 @@ function MessageRow({ post, isSaved, onSaveToggle, onUpdatePost }) {
                 onClick={() => setEditOpen(true)}
                 className="min-h-8 inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground active:text-primary"
               >
+                <PencilSimple size={16} weight="bold" />
                 Edit
               </button>
               <button
