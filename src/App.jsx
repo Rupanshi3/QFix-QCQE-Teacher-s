@@ -19,6 +19,7 @@ import ScheduleView from './screens/ScheduleView'
 import Reports from './screens/Reports'
 import TimetableBuilder from './screens/TimetableBuilder'
 import StaffDirectory from './screens/StaffDirectory'
+import EmptyStates from './screens/EmptyStates'
 import { getLocationDepth } from './lib/pageTransitions'
 
 function ProtectedRoute({ children }) {
@@ -36,6 +37,7 @@ function RouteTree({ location }) {
       <Route path="/schedule/timetable" element={<ProtectedRoute><TimetableBuilder /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
       <Route path="/staff-directory" element={<ProtectedRoute><StaffDirectory /></ProtectedRoute>} />
+      <Route path="/empty-states" element={<ProtectedRoute><EmptyStates /></ProtectedRoute>} />
       <Route path="/workspace/:classId" element={<ProtectedRoute><ClassWorkspace /></ProtectedRoute>} />
       <Route path="/attendance/:classId" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
       <Route path="/students/:classId" element={<ProtectedRoute><StudentsList /></ProtectedRoute>} />
