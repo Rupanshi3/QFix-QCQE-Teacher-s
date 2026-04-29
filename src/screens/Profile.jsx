@@ -55,6 +55,14 @@ export default function Profile() {
 
           <InfoRow label="School Name" value={currentUser.institute} />
 
+          <button
+            type="button"
+            onClick={() => navigate('/empty-states')}
+            className="w-fit text-[13px] font-semibold text-primary active:opacity-70"
+          >
+            Empty States
+          </button>
+
           <p className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wide">Directory</p>
           <div className="flex flex-col divide-y divide-border">
             <button
